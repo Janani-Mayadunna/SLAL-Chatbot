@@ -45,10 +45,10 @@ def respond(question):
     return answer, format_sources(retrieved_docs)
 
 
-with gr.Blocks(title="Sri Lankan Airlines RAG Chatbot") as demo:
+with gr.Blocks(title="Sri Lankan Airlines Policy Assistant") as demo:
     gr.Markdown(
         """
-        # Sri Lankan Airlines RAG Chatbot
+        # Sri Lankan Airlines Policy Assistant
         Ask questions about Sri Lankan Airlines Conditions of Carriage.
 
         This chatbot retrieves relevant policy text from the knowledge base and
