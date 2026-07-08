@@ -16,7 +16,8 @@ logs/
 *.log
 
 # Dataset
-dataset/
+dataset/*
+!dataset/README.md
 
 # Vector Store
 vector_store/
