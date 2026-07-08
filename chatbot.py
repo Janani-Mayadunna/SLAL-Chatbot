@@ -15,7 +15,10 @@ TOXICITY_RESPONSE = "Please ask your question in respectful language."
 UNKNOWN_SOURCE = "Unknown source"
 MIN_RERANK_SCORE = 4
 MIN_SEMANTIC_SIMILARITY = 0.38
-SECTION_REF_PATTERN = re.compile(r"^\d{1,2}(?:\.\d{1,2}){1,3}\s+")
+SECTION_REF_PATTERN = re.compile(
+    r"(?:^|(?<=\s))\d{1,2}(?:\.\d{1,2}){1,3}\s+(?=[A-Za-z])",
+    re.MULTILINE,
+)
 INJECTION_PATTERNS = (
     re.compile(r"\bignore\b.{0,30}\b(previous|above|earlier|prior)\b.{0,20}\b(instruction|prompt|message)s?\b", re.IGNORECASE),
     re.compile(r"\bforget\b.{0,30}\b(previous|above|earlier|prior)\b.{0,20}\b(instruction|prompt|message)s?\b", re.IGNORECASE),
@@ -30,10 +33,11 @@ TOXIC_PATTERNS = (
 
 PROMPT_TEMPLATE = """You are a Sri Lankan Airlines policy assistant.
 Answer the question using only the policy text below.
-Write 1 to 2 clear sentences in plain English.
+Write clear sentences in plain English.
+If the answer covers multiple classes, allowances, or policy sections, put each on its own line.
 Do not repeat headings, labels, or section titles.
 If the policy text does not answer the question, reply exactly:
-The information is unavailable in the Sri Lankan Airlines knowledge base.
+I couldn't find this information in the knowledge base.
 
 Policy text:
 {evidence}
@@ -46,6 +50,17 @@ Answer:
 
 LABEL_PATTERN = re.compile(
     r"\b(?:Title|Section|Excerpt|Source|Description)\s*:\s*",
+    re.IGNORECASE,
+)
+ANSWER_BREAK_PATTERN = re.compile(
+    r"(?<!^)\s+(?=(?:"
+    r"Business Class|"
+    r"Economy Class|"
+    r"Premium Economy(?: Class)?|"
+    r"First Class|"
+    r"Infant(?:\s*\([^)]*\))?|"
+    r"\d{1,2}(?:\.\d{1,2})+\s+"
+    r"))",
     re.IGNORECASE,
 )
 
@@ -252,9 +267,26 @@ def clean_final_answer(answer):
     cleaned = answer.strip()
     cleaned = LABEL_PATTERN.sub("", cleaned)
     cleaned = re.sub(r"\[\d+\]\s*", "", cleaned)
-    cleaned = SECTION_REF_PATTERN.sub("", cleaned)
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    return cleaned
+    cleaned = re.sub(r"^\d{1,2}(?:\.\d{1,2}){1,3}\s+(?=[A-Za-z])", "", cleaned)
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\s*\n\s*", "\n", cleaned)
+    return cleaned.strip()
+
+
+def format_answer_display(answer):
+    if not answer or answer in {FALLBACK_RESPONSE, GUARDRAIL_RESPONSE, TOXICITY_RESPONSE}:
+        return answer
+
+    formatted = ANSWER_BREAK_PATTERN.sub("\n", answer.strip())
+    lines = []
+    for line in formatted.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        line = SECTION_REF_PATTERN.sub("", line).strip()
+        if line:
+            lines.append(line)
+    return "\n\n".join(lines)
 
 
 def capitalize_sentence(text):
@@ -266,10 +298,12 @@ def capitalize_sentence(text):
 def evidence_to_answer(evidence):
     text = LABEL_PATTERN.sub("", evidence)
     text = re.sub(r"\[\d+\]\s*", "", text)
+    text = SECTION_REF_PATTERN.sub("", text)
     parts = [p.strip() for p in re.split(r"\n\n+", text) if p.strip()]
     if not parts:
         return FALLBACK_RESPONSE
-    answer = " ".join(parts[:2])
+    # Keep each retrieved excerpt on its own paragraph for readability.
+    answer = "\n\n".join(parts[:2])
     answer = capitalize_sentence(answer)
     if answer and answer[-1] not in ".!?":
         answer += "."
@@ -389,6 +423,7 @@ def answer_question(question, vector_store, llm):
     ):
         response = evidence_to_answer(evidence)
 
+    response = format_answer_display(response)
     return response, docs
 
 
