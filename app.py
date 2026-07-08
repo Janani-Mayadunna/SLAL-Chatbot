@@ -8,30 +8,47 @@ LLM = load_llm()
 
 def format_sources(documents):
     if not documents:
-        return "No sources retrieved."
+        return "**Retrieved Sources**\n\nNo sources retrieved."
 
-    seen_sources = []
+    seen_sources = {}
     for doc in documents:
         source = doc.metadata.get("source", "Unknown source")
-        if source not in seen_sources:
-            seen_sources.append(source)
+        filename = source.rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+        if filename in seen_sources:
+            continue
 
-    return "\n".join(f"- {source}" for source in seen_sources)
+        section = (
+            doc.metadata.get("title", "").strip()
+            or doc.metadata.get("section_heading", "").strip()
+        )
+        if section == "Unknown title":
+            section = ""
+
+        seen_sources[filename] = section
+
+    lines = ["**Retrieved Sources**", ""]
+    for filename, section in seen_sources.items():
+        if section:
+            lines.append(f"- {filename} - Section: {section}")
+        else:
+            lines.append(f"- {filename}")
+
+    return "\n".join(lines)
 
 
 def respond(question):
     question = question.strip()
     if not question:
-        return "Please enter a question.", "No sources retrieved."
+        return "Please enter a question.", format_sources([])
 
     answer, retrieved_docs = answer_question(question, VECTOR_STORE, LLM)
     return answer, format_sources(retrieved_docs)
 
 
-with gr.Blocks(title="Sri Lankan Airlines RAG Chatbot") as demo:
+with gr.Blocks(title="Sri Lankan Airlines Policy Assistant") as demo:
     gr.Markdown(
         """
-        # Sri Lankan Airlines RAG Chatbot
+        # Sri Lankan Airlines Policy Assistant
         Ask questions about Sri Lankan Airlines Conditions of Carriage.
 
         This chatbot retrieves relevant policy text from the knowledge base and
