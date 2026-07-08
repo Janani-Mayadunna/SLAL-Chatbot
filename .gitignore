@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+
+# Virtual Environment
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Dataset
+dataset/
+
+# Vector Store
+vector_store/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment Variables
+.env
+
+# Build
+dist/
+build/
