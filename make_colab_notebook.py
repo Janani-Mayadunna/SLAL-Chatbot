@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "SLAL_chatbot.ipynb"
 
 PYTHON_FILES = ["build_index.py", "chatbot.py", "app.py"]
-DRIVE_DATASET_PATH = "/content/drive/MyDrive/MSc/NLP/Chatbot/dataset"
+DATASET_FOLDER_URL = "https://drive.google.com/drive/folders/1vyyhSn4leDS70P7dyifrak2Vn0nn-K34?usp=drive_link"
 PROJECT_DIR = "/content/SLAL_chatbot"
 
 
@@ -68,40 +68,35 @@ def main() -> None:
     cells = [
         markdown_cell(
             """# Sri Lankan Airlines Policy Assistant
-
-## What this notebook recreates automatically
-- `build_index.py`, `chatbot.py`, `app.py`
-- `vector_store/` (FAISS index built from the dataset)
 """
         ),
         code_cell(
-            """from google.colab import drive
-drive.mount("/content/drive")"""
-        ),
-        code_cell(
-            f"""import os
-import shutil
+            f"""import shutil
 from pathlib import Path
 
-DRIVE_DATASET_PATH = Path("{DRIVE_DATASET_PATH}")
+!pip install -q gdown
+import gdown
+
+DATASET_FOLDER_URL = "{DATASET_FOLDER_URL}"
 PROJECT_DIR = Path("{PROJECT_DIR}")
 LOCAL_DATASET_PATH = PROJECT_DIR / "dataset"
-
-if not DRIVE_DATASET_PATH.exists():
-    raise FileNotFoundError(
-        "Dataset not found at: " + str(DRIVE_DATASET_PATH) + "\\n"
-        "Upload your dataset folder to: My Drive > MSc > NLP > Chatbot > dataset"
-    )
 
 PROJECT_DIR.mkdir(parents=True, exist_ok=True)
 
 if LOCAL_DATASET_PATH.exists():
     shutil.rmtree(LOCAL_DATASET_PATH)
 
-shutil.copytree(DRIVE_DATASET_PATH, LOCAL_DATASET_PATH)
+LOCAL_DATASET_PATH.mkdir(parents=True, exist_ok=True)
+
+gdown.download_folder(
+    url=DATASET_FOLDER_URL,
+    output=str(LOCAL_DATASET_PATH),
+    quiet=False,
+    use_cookies=False,
+)
 
 txt_files = sorted(LOCAL_DATASET_PATH.glob("*.txt"))
-print(f"Copied {{len(txt_files)}} dataset files to {{LOCAL_DATASET_PATH}}")
+print(f"Downloaded {{len(txt_files)}} dataset files to {{LOCAL_DATASET_PATH}}")
 for path in txt_files[:5]:
     print(" -", path.name)
 if len(txt_files) > 5:
@@ -154,7 +149,7 @@ demo.launch(share=True)"""
 
     print(f"Wrote {OUTPUT}")
     print(f"Embedded Python files: {', '.join(PYTHON_FILES)}")
-    print(f"Drive dataset path: {DRIVE_DATASET_PATH}")
+    print(f"Dataset folder URL: {DATASET_FOLDER_URL}")
 
 
 if __name__ == "__main__":
